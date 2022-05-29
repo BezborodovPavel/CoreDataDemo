@@ -123,7 +123,7 @@ extension TaskListViewController {
     
     override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
         if editingStyle == .delete {
-            let resultDeleting = storageManager.deleteTask(indexPath.row)
+            let resultDeleting = storageManager.deleteTask(taskList[indexPath.row])
             switch resultDeleting {
             case .success(let isDeleted):
                 if isDeleted {
@@ -143,7 +143,7 @@ extension TaskListViewController {
             and: "What do you want edit?",
             placeholder: taskList[indexPath.row].title ?? "") { alert in
                 guard let newTaskTitle = alert.textFields?.first?.text, !newTaskTitle.isEmpty else { return }
-                let editingResult = self.storageManager.editTask(indexPath.row, newTitle: newTaskTitle)
+                let editingResult = self.storageManager.editTask(self.taskList[indexPath.row], newTitle: newTaskTitle)
                 switch editingResult {
                 case .success(let task):
                     self.taskList[indexPath.row] = task

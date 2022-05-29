@@ -20,9 +20,20 @@ enum DataError: String, Error { //do it
 class StorageManager {
     
     static let shared = StorageManager()
-    private let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    private let context: NSManagedObjectContext
+    private let persistentContainer: NSPersistentContainer = {
+        let container = NSPersistentContainer(name: "CoreDataDemo")
+        container.loadPersistentStores(completionHandler: { (storeDescription, error) in
+            if let error = error as NSError? {
+                fatalError("Unresolved error \(error), \(error.userInfo)")
+            }
+        })
+        return container
+    }()
 
-    private init() {}
+    private init() {
+        context = persistentContainer.viewContext
+    }
     
     func fetchData() -> Result<[Task], DataError>{
         
@@ -64,13 +75,7 @@ class StorageManager {
         }
     }
     
-    func editTask(_ index: Int, newTitle: String)-> Result<Task, DataError>{
-        let task = getTaskAt(index)
-        switch task {
-        case .success(let returnedTask):
-            guard let task = returnedTask else {
-                return .failure(.noTaskInDataBase)
-            }
+    func editTask(_ task: Task, newTitle: String)-> Result<Task, DataError>{
             task.title = newTitle
             switch saveContext() {
             case .success(_):
@@ -78,47 +83,19 @@ class StorageManager {
             case .failure(let saveError):
                 return .failure(saveError)
             }
-        case .failure(let errorGetTask):
-            return .failure(errorGetTask)
-        }
     }
     
-    func deleteTask(_ index: Int) -> Result<Bool, DataError>{
-
-        let task = getTaskAt(index)
-        switch task {
-        case .success(let returnedTask):
-            guard let task = returnedTask else {
-                return .success(false)
-            }
-            
+    func deleteTask(_ task: Task) -> Result<Bool, DataError>{
             context.delete(task)
-            
-            switch saveContext() {
-            case .success(_):
-                return .success(true)
-            case .failure(let saveError):
-                return .failure(saveError)
-            }
-            
-        case .failure(let errorGetTask):
-            return .failure(errorGetTask)
-        }
+            return saveToContext()
     }
     
-    
-    private func getTaskAt(_ index: Int) -> Result<Task?, DataError>{
-       
-        let fetchRequest = Task.fetchRequest()
-        fetchRequest.fetchLimit = 1
-        fetchRequest.fetchOffset = index
-        
-        var tasks: [Task] = []
-        do {
-            tasks = try context.fetch(fetchRequest)
-            return Result.success(tasks.first)
-        } catch {
-            return Result.failure(.failedFetchData)
+    private func saveToContext() -> Result<Bool, DataError>{
+        switch saveContext() {
+        case .success(_):
+            return .success(true)
+        case .failure(let saveError):
+            return .failure(saveError)
         }
     }
     
